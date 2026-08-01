@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { db, mutate, uid } from "@/lib/local/store";
 import { slugify } from "@/lib/utils";
-import type { Category } from "@/types/database.types";
+import type { Category, Database } from "@/types/database.types";
 
 export interface CategoryInput {
   name: string;
@@ -71,7 +71,7 @@ export async function createCategory(input: CategoryInput): Promise<void> {
     parent_id: input.parent_id ?? null,
     position,
     is_active: input.is_active ?? true,
-  } as never);
+  });
   if (error) throw error;
 }
 
@@ -85,7 +85,7 @@ export async function updateCategory(
   }
   const supabase = await createClient();
 
-  const patch: Record<string, unknown> = {
+  const patch: Database["tienda"]["Tables"]["categories"]["Update"] = {
     description: input.description ?? null,
     parent_id: input.parent_id ?? null,
   };
@@ -108,7 +108,7 @@ export async function updateCategory(
 
   const { error } = await supabase
     .from("categories")
-    .update(patch as never)
+    .update(patch)
     .eq("id", id);
   if (error) throw error;
 }

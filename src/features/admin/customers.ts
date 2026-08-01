@@ -65,7 +65,7 @@ export async function toggleCustomerBlocked(id: string): Promise<void> {
   if (!u) return;
   const { error } = await supabase
     .from("profiles")
-    .update({ is_blocked: !u.is_blocked } as never)
+    .update({ is_blocked: !u.is_blocked })
     .eq("id", id);
   if (error) throw error;
 }

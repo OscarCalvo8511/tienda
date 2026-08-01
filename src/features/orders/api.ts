@@ -129,7 +129,7 @@ export async function updateOrderStatus(
   const supabase = await createClient();
   const { error } = await supabase
     .from("orders")
-    .update({ status } as never)
+    .update({ status })
     .eq("id", orderId);
   if (error) throw error;
 }
@@ -199,7 +199,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
       customer_email: input.customer.email,
       customer_phone: input.customer.phone,
       notes: input.notes ?? null,
-    } as never)
+    })
     .select("*")
     .single();
   if (orderError) throw orderError;
@@ -217,7 +217,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   }));
   const { error: itemsError } = await supabase
     .from("order_items")
-    .insert(itemRows as never);
+    .insert(itemRows);
   if (itemsError) throw itemsError;
 
   // Descontar inventario (la RPC registra el movimiento y ajusta el estado)
@@ -227,12 +227,12 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
       p_delta: -p.quantity,
       p_type: "sale",
       p_reason: `Venta ${order.order_number}`,
-      p_variant_id: null,
-    } as never);
+      p_variant_id: undefined,
+    });
   }
 
   // Registra unidades vendidas, uso de cupón e historial de estado inicial
-  await supabase.rpc("register_sale", { p_order_id: order.id } as never);
+  await supabase.rpc("register_sale", { p_order_id: order.id });
 
   return order;
 }

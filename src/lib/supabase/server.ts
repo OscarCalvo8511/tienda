@@ -37,9 +37,7 @@ export async function createClient() {
  * (webhooks de pago, jobs, operaciones de sistema). Nunca en cliente.
  */
 export function createAdminClient() {
-  // Sin genérico Database: cliente permisivo para escrituras de sistema
-  // (webhooks, jobs). Los tipos estrictos se recuperan al regenerar desde Supabase.
-  return createSupabaseClient(
+  return createSupabaseClient<Database, "tienda">(
     env.supabaseUrl,
     serverEnv.supabaseServiceRoleKey,
     {

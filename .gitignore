@@ -37,6 +37,9 @@ yarn-error.log*
 # local runtime data (JSON store for MODO LOCAL)
 /.data/
 
+# supabase CLI local cache
+/supabase/.temp/
+
 # vercel
 .vercel
 

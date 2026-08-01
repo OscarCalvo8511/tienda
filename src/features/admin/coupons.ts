@@ -53,7 +53,7 @@ export async function createCoupon(input: CouponInput): Promise<void> {
       starts_at: input.starts_at ?? null,
       expires_at: input.expires_at ?? null,
       is_active: input.is_active ?? true,
-    } as never,
+    },
     { onConflict: "code" },
   );
   if (error) throw error;

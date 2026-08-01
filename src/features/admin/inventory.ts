@@ -93,9 +93,9 @@ export async function adjustInventory(
     p_product_id: input.productId,
     p_delta: input.delta,
     p_type: input.type,
-    p_reason: input.reason ?? null,
-    p_variant_id: null,
-  } as never);
+    p_reason: input.reason ?? undefined,
+    p_variant_id: undefined,
+  });
   if (error) throw error;
   return (data as number) ?? 0;
 }

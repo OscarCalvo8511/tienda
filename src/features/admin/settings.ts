@@ -47,7 +47,7 @@ export async function updateSettings(input: SettingsInput): Promise<void> {
   ];
   const { error } = await supabase
     .from("settings")
-    .upsert(rows as never, { onConflict: "key" });
+    .upsert(rows, { onConflict: "key" });
   if (error) throw error;
 }
 

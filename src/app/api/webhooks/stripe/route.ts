@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe/server";
 import { serverEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/server";
+import type { Json } from "@/types/database.types";
 
 // Stripe requiere el cuerpo sin procesar para verificar la firma.
 export const runtime = "nodejs";
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
             status: "approved",
             amount: (session.amount_total ?? 0),
             currency: (session.currency ?? "cop").toUpperCase(),
-            raw: session as unknown as Record<string, unknown>,
+            raw: session as unknown as Json,
           });
         }
         break;

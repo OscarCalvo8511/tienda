@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { db, mutate, uid } from "@/lib/local/store";
 import { slugify } from "@/lib/utils";
-import type { Product, ProductImage, Json } from "@/types/database.types";
+import type { Product, ProductImage, Json, Database } from "@/types/database.types";
 
 export interface AdminProductRow extends Product {
   stock: number;
@@ -124,7 +124,7 @@ export async function createProduct(input: ProductInput): Promise<string> {
       is_carousel: input.is_carousel ?? false,
       category_id: input.category_id ?? null,
       video_url: input.video_url ?? null,
-    } as never)
+    })
     .select("id")
     .single();
   if (error) throw error;
@@ -137,7 +137,7 @@ export async function createProduct(input: ProductInput): Promise<string> {
     variant_id: null,
     quantity: input.stock ?? 0,
     low_stock_threshold: 5,
-  } as never);
+  });
   if (invError) throw invError;
 
   return productId;
@@ -160,7 +160,7 @@ export async function updateProduct(
     .single();
   const cur = current as { name: string; slug: string } | null;
 
-  const patch: Record<string, unknown> = {
+  const patch: Database["tienda"]["Tables"]["products"]["Update"] = {
     name: input.name,
     sku: input.sku ?? null,
     barcode: input.barcode ?? null,
@@ -186,7 +186,7 @@ export async function updateProduct(
 
   const { error } = await supabase
     .from("products")
-    .update(patch as never)
+    .update(patch)
     .eq("id", id);
   if (error) throw error;
 
@@ -205,7 +205,7 @@ export async function updateProduct(
     if (inv) {
       await supabase
         .from("inventory")
-        .update({ quantity: input.stock } as never)
+        .update({ quantity: input.stock })
         .eq("id", (inv as { id: string }).id);
     } else {
       await supabase.from("inventory").insert({
@@ -213,7 +213,7 @@ export async function updateProduct(
         variant_id: null,
         quantity: input.stock,
         low_stock_threshold: 5,
-      } as never);
+      });
     }
   }
 }
@@ -268,7 +268,7 @@ export async function toggleProductActive(id: string): Promise<void> {
   if (!p) return;
   const { error } = await supabase
     .from("products")
-    .update({ is_active: !p.is_active } as never)
+    .update({ is_active: !p.is_active })
     .eq("id", id);
   if (error) throw error;
 }
@@ -288,7 +288,7 @@ async function insertImages(
     is_primary: i === 0,
     position: i,
   }));
-  const { error } = await supabase.from("product_images").insert(rows as never);
+  const { error } = await supabase.from("product_images").insert(rows);
   if (error) throw error;
 }
 
