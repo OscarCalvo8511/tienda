@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(git --version)",
+      "mcp__3fd65590-88ea-46b5-ac17-94b1afe12bb9__list_tables",
+      "mcp__3fd65590-88ea-46b5-ac17-94b1afe12bb9__get_project_url",
+      "PowerShell(winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements --silent)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); node -v; npm -v)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Admin\\\\ecomerce\"; npm install @supabase/supabase-js @supabase/ssr @tanstack/react-query zustand zod stripe @stripe/stripe-js clsx tailwind-merge class-variance-authority lucide-react next-themes sonner recharts date-fns 2>&1 | Select-Object -Last 15)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Admin\\\\ecomerce\"; npx --yes shadcn@latest init -y -b radix 2>&1 | Select-Object -Last 25)",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).dependencies.next, require\\('./package.json'\\).dependencies.react\\)\")",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Admin\\\\ecomerce\"; npm install tw-animate-css 2>&1 | Select-Object -Last 4)",
+      "mcp__3fd65590-88ea-46b5-ac17-94b1afe12bb9__get_publishable_keys",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Admin\\\\ecomerce\"; npm install react-hook-form @hookform/resolvers @radix-ui/react-slot @radix-ui/react-dropdown-menu @radix-ui/react-dialog @radix-ui/react-label @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-avatar @radix-ui/react-tabs @radix-ui/react-checkbox @radix-ui/react-switch @radix-ui/react-slider @radix-ui/react-accordion @radix-ui/react-tooltip @radix-ui/react-popover @radix-ui/react-scroll-area @radix-ui/react-radio-group @radix-ui/react-progress 2>&1 | Select-Object -Last 4)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Admin\\\\ecomerce\"; echo \"\" | npx --yes shadcn@latest add button --yes 2>&1 | Select-Object -Last 25)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Admin\\\\ecomerce\"; npx --yes shadcn@latest add input label textarea card badge separator dropdown-menu dialog sheet select avatar tabs checkbox switch slider accordion tooltip popover scroll-area radio-group progress table skeleton sonner form sidebar breadcrumb pagination alert alert-dialog --yes 2>&1 | Select-Object -Last 20)",
+      "mcp__3fd65590-88ea-46b5-ac17-94b1afe12bb9__execute_sql"
+    ]
+  }
+}

@@ -1,0 +1,256 @@
+"use client";
+
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Loader2, Lock } from "lucide-react";
+import { toast } from "sonner";
+import { useCart } from "@/stores/cart";
+import { useCouponStore } from "@/stores/coupon";
+import { createCheckoutAction } from "@/features/orders/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { formatCOP } from "@/lib/utils";
+import { COLOMBIA_DEPARTMENTS } from "@/lib/colombia";
+
+interface ShippingMethod {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export function CheckoutForm({
+  methods,
+  freeThreshold,
+  taxRate,
+  taxIncluded,
+  defaultEmail,
+}: {
+  methods: ShippingMethod[];
+  freeThreshold: number;
+  taxRate: number;
+  taxIncluded: boolean;
+  defaultEmail: string;
+}) {
+  const router = useRouter();
+  const { items, clear } = useCart();
+  const { code, discount, clearCoupon } = useCouponStore();
+  const [method, setMethod] = useState(methods[0]?.id ?? "standard");
+  const [submitting, setSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const subtotal = useMemo(
+    () => items.reduce((s, i) => s + i.price * i.quantity, 0),
+    [items],
+  );
+  const effectiveDiscount = code ? Math.min(discount, subtotal) : 0;
+  const discounted = subtotal - effectiveDiscount;
+  const selectedMethod = methods.find((m) => m.id === method);
+  const freeShipping = freeThreshold > 0 && discounted >= freeThreshold;
+  const shipping = freeShipping ? 0 : selectedMethod?.price ?? 0;
+  const tax = taxIncluded
+    ? Math.round(discounted - discounted / (1 + taxRate))
+    : Math.round(discounted * taxRate);
+  const total = taxIncluded ? discounted + shipping : discounted + shipping + tax;
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (items.length === 0) {
+      toast.error("Tu carrito está vacío");
+      return;
+    }
+    const fd = new FormData(e.currentTarget);
+    setSubmitting(true);
+    const res = await createCheckoutAction({
+      items: items.map((i) => ({
+        productId: i.productId,
+        variantId: i.variantId ?? null,
+        quantity: i.quantity,
+      })),
+      customer: {
+        email: String(fd.get("email")),
+        phone: String(fd.get("phone")),
+      },
+      shippingMethodId: method,
+      address: {
+        full_name: String(fd.get("full_name")),
+        line1: String(fd.get("line1")),
+        line2: String(fd.get("line2") ?? ""),
+        city: String(fd.get("city")),
+        department: String(fd.get("department")),
+        country: "Colombia",
+      },
+      couponCode: code,
+      notes: String(fd.get("notes") ?? ""),
+    });
+    setSubmitting(false);
+
+    if (res.ok) {
+      clear();
+      clearCoupon();
+      router.push(res.redirect);
+    } else {
+      toast.error(res.error);
+    }
+  }
+
+  if (mounted && items.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed py-16 text-center">
+        <p className="text-sm text-muted-foreground">Tu carrito está vacío.</p>
+        <Button asChild className="mt-4">
+          <Link href="/productos">Ver productos</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="space-y-8">
+        {/* Contacto */}
+        <section className="space-y-4 rounded-xl border p-5">
+          <h2 className="font-semibold">Datos de contacto</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Correo" name="email" type="email" required defaultValue={defaultEmail} />
+            <Field label="Teléfono" name="phone" type="tel" required placeholder="300 000 0000" />
+          </div>
+        </section>
+
+        {/* Envío */}
+        <section className="space-y-4 rounded-xl border p-5">
+          <h2 className="font-semibold">Dirección de envío</h2>
+          <Field label="Nombre completo" name="full_name" required />
+          <Field label="Dirección" name="line1" required placeholder="Calle 00 # 00-00" />
+          <Field label="Complemento (opcional)" name="line2" placeholder="Apto, torre, indicaciones" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Ciudad" name="city" required />
+            <div className="space-y-1.5">
+              <Label htmlFor="department">Departamento</Label>
+              <select
+                id="department"
+                name="department"
+                required
+                defaultValue=""
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="" disabled>Selecciona…</option>
+                {COLOMBIA_DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <Field label="País" name="country" defaultValue="Colombia" disabled />
+        </section>
+
+        {/* Método de envío */}
+        <section className="space-y-3 rounded-xl border p-5">
+          <h2 className="font-semibold">Método de envío</h2>
+          {methods.map((m) => (
+            <label
+              key={m.id}
+              className="flex cursor-pointer items-center justify-between rounded-lg border p-3 text-sm has-[:checked]:border-brand has-[:checked]:bg-accent"
+            >
+              <span className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="shipping_method"
+                  checked={method === m.id}
+                  onChange={() => setMethod(m.id)}
+                />
+                {m.name}
+              </span>
+              <span className="font-medium">
+                {freeShipping ? "Gratis" : formatCOP(m.price)}
+              </span>
+            </label>
+          ))}
+        </section>
+
+        {/* Pago */}
+        <section className="space-y-3 rounded-xl border p-5">
+          <h2 className="font-semibold">Método de pago</h2>
+          <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+            <p className="flex items-center gap-2 font-medium text-foreground">
+              <Lock className="size-4" /> Pago seguro
+            </p>
+            <p className="mt-1">
+              En modo demo el pago se simula y el pedido queda como{" "}
+              <strong>pagado</strong>. Al conectar Stripe, aquí se abrirá la
+              pasarela real.
+            </p>
+          </div>
+        </section>
+      </div>
+
+      {/* Resumen */}
+      <div className="h-fit space-y-4 rounded-xl border p-5">
+        <h2 className="font-semibold">Tu pedido</h2>
+        <ul className="max-h-64 space-y-3 overflow-auto text-sm">
+          {mounted &&
+            items.map((i) => (
+              <li key={`${i.productId}-${i.variantId ?? ""}`} className="flex justify-between gap-2">
+                <span className="text-muted-foreground">
+                  {i.quantity}× {i.name}
+                </span>
+                <span className="shrink-0">{formatCOP(i.price * i.quantity)}</span>
+              </li>
+            ))}
+        </ul>
+        <dl className="space-y-2 border-t pt-3 text-sm">
+          <Row label="Subtotal" value={formatCOP(subtotal)} />
+          {effectiveDiscount > 0 && (
+            <Row label={`Descuento (${code})`} value={`−${formatCOP(effectiveDiscount)}`} accent />
+          )}
+          <Row label="Envío" value={freeShipping ? "Gratis" : formatCOP(shipping)} />
+          <Row label={taxIncluded ? "IVA incluido" : "IVA"} value={formatCOP(tax)} muted />
+          <div className="flex justify-between border-t pt-2 text-base font-bold">
+            <dt>Total</dt>
+            <dd>{formatCOP(total)}</dd>
+          </div>
+        </dl>
+        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+          {submitting && <Loader2 className="size-4 animate-spin" />}
+          Pagar {formatCOP(total)}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function Field({
+  label,
+  name,
+  ...props
+}: { label: string; name: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={name}>{label}</Label>
+      <Input id={name} name={name} {...props} />
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  accent,
+  muted,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      className={`flex justify-between ${accent ? "text-success" : muted ? "text-muted-foreground" : ""}`}
+    >
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
