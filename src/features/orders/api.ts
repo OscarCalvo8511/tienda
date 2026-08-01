@@ -1,6 +1,7 @@
 import "server-only";
-import { isSupabaseConfigured } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
+import { env, isSupabaseConfigured, isWompiConfigured } from "@/lib/env";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { getPaymentProvider } from "@/lib/payments/provider";
 import { effectivePrice } from "@/lib/utils";
 import { getSettings } from "@/features/settings/api";
 import { computeTotals } from "./pricing";
@@ -135,9 +136,14 @@ export async function updateOrderStatus(
 }
 
 /**
- * Crea un pedido en Supabase con pago simulado (marcado 'paid').
- * Re-precia desde la base para evitar manipulación del cliente y descuenta
- * inventario vía la RPC adjust_inventory (SECURITY DEFINER).
+ * Crea un pedido en Supabase re-preciando desde la base (evita manipulación
+ * del cliente).
+ *
+ * - Con Wompi configurado: el pedido nace 'pending'. El inventario, el
+ *   `sold_count` y el uso de cupón se aplican al CONFIRMAR el pago
+ *   (webhook o página de retorno), no aquí. Ver `confirmOrderPayment`.
+ * - Sin pasarela (modo demo): pago simulado 'paid', descontando inventario
+ *   y registrando la venta de inmediato.
  */
 export async function createOrder(input: CheckoutInput): Promise<Order> {
   if (!isSupabaseConfigured()) return createLocalOrder(input);
@@ -182,11 +188,13 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     taxIncluded: settings.tax.included,
   });
 
+  const wompi = isWompiConfigured();
+
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
       user_id: input.userId ?? null,
-      status: "paid",
+      status: wompi ? "pending" : "paid",
       subtotal: totals.subtotal,
       discount_total: totals.discount,
       shipping_total: totals.shipping,
@@ -220,19 +228,100 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     .insert(itemRows);
   if (itemsError) throw itemsError;
 
-  // Descontar inventario (la RPC registra el movimiento y ajusta el estado)
-  for (const p of priced) {
-    await supabase.rpc("adjust_inventory", {
-      p_product_id: p.product.id,
-      p_delta: -p.quantity,
-      p_type: "sale",
-      p_reason: `Venta ${order.order_number}`,
-      p_variant_id: undefined,
-    });
+  // Con pasarela real, el inventario y la venta se registran al confirmar el
+  // pago (webhook/retorno). En modo demo, se hace ya con pago simulado.
+  if (!wompi) {
+    for (const p of priced) {
+      await supabase.rpc("adjust_inventory", {
+        p_product_id: p.product.id,
+        p_delta: -p.quantity,
+        p_type: "sale",
+        p_reason: `Venta ${order.order_number}`,
+        p_variant_id: undefined,
+      });
+    }
+    await supabase.rpc("register_sale", { p_order_id: order.id });
   }
 
-  // Registra unidades vendidas, uso de cupón e historial de estado inicial
-  await supabase.rpc("register_sale", { p_order_id: order.id });
-
   return order;
+}
+
+// ============================================================
+//  PASARELA DE PAGO (Wompi)
+// ============================================================
+
+/**
+ * Crea la sesión de pago en la pasarela y devuelve la URL a la que redirigir
+ * al cliente. La firma de integridad se genera en servidor.
+ */
+export async function createPaymentSession(
+  order: Order,
+  customer: { name?: string | null },
+): Promise<string> {
+  const provider = getPaymentProvider("wompi");
+  const { redirectUrl } = await provider.createCheckout({
+    orderId: order.id,
+    orderNumber: order.order_number,
+    currency: order.currency,
+    amount: Number(order.total),
+    lines: [],
+    shippingAmount: Number(order.shipping_total),
+    discountAmount: Number(order.discount_total),
+    customerEmail: order.customer_email,
+    customerName: customer.name ?? null,
+    customerPhone: order.customer_phone,
+    successUrl: `${env.siteUrl}/checkout/retorno/${encodeURIComponent(order.order_number)}`,
+    cancelUrl: `${env.siteUrl}/carrito`,
+  });
+  return redirectUrl;
+}
+
+/** Busca un pedido por su número usando el cliente admin (sin sesión, para webhook/retorno). */
+export async function getOrderForPayment(
+  orderNumber: string,
+): Promise<{ id: string; total: number; status: OrderStatus } | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("orders")
+    .select("id, total, status")
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+  if (!data) return null;
+  return { id: data.id, total: Number(data.total), status: data.status };
+}
+
+/** Confirma el pago (atómico e idempotente vía RPC). Devuelve el estado final. */
+export async function confirmOrderPayment(
+  orderId: string,
+  providerRef: string,
+  amount: number,
+): Promise<OrderStatus> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("confirm_order_payment", {
+    p_order_id: orderId,
+    p_provider: "wompi",
+    p_provider_ref: providerRef,
+    p_amount: amount,
+  });
+  if (error) throw error;
+  return data as OrderStatus;
+}
+
+/** Marca un intento de pago fallido/anulado (idempotente). */
+export async function failOrderPayment(
+  orderId: string,
+  providerRef: string,
+  amount: number,
+  newStatus: OrderStatus = "cancelled",
+): Promise<OrderStatus> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("fail_order_payment", {
+    p_order_id: orderId,
+    p_provider: "wompi",
+    p_provider_ref: providerRef,
+    p_amount: amount,
+    p_new_status: newStatus,
+  });
+  if (error) throw error;
+  return data as OrderStatus;
 }

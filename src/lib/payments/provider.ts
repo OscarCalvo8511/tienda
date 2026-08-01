@@ -17,10 +17,14 @@ export interface CreateCheckoutInput {
   orderId: string;
   orderNumber: string;
   currency: string;
+  /** Total a cobrar, en la unidad principal de la moneda (p. ej. pesos COP). */
+  amount: number;
   lines: CheckoutLine[];
   shippingAmount: number;
   discountAmount: number;
   customerEmail?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
   successUrl: string;
   cancelUrl: string;
 }
@@ -38,11 +42,12 @@ export interface PaymentProviderAdapter {
 }
 
 import { stripeProvider } from "./stripe-provider";
+import { wompiProvider } from "./wompi-provider";
 
 const registry: Partial<Record<ProviderName, PaymentProviderAdapter>> = {
   stripe: stripeProvider,
+  wompi: wompiProvider,
   // mercadopago: mercadoPagoProvider,
-  // wompi: wompiProvider,
   // payu: payuProvider,
   // paypal: paypalProvider,
 };

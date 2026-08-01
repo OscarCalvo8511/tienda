@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 import { getSettings } from "@/features/settings/api";
 import { getCurrentProfile } from "@/features/auth/api";
+import { isWompiConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Finalizar compra" };
 
@@ -28,6 +29,7 @@ export default async function CheckoutPage() {
         taxRate={tax.rate}
         taxIncluded={tax.included}
         defaultEmail={profile?.email ?? ""}
+        wompiEnabled={isWompiConfigured()}
       />
     </div>
   );

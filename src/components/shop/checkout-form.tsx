@@ -26,12 +26,14 @@ export function CheckoutForm({
   taxRate,
   taxIncluded,
   defaultEmail,
+  wompiEnabled,
 }: {
   methods: ShippingMethod[];
   freeThreshold: number;
   taxRate: number;
   taxIncluded: boolean;
   defaultEmail: string;
+  wompiEnabled: boolean;
 }) {
   const router = useRouter();
   const { items, clear } = useCart();
@@ -85,13 +87,18 @@ export function CheckoutForm({
       couponCode: code,
       notes: String(fd.get("notes") ?? ""),
     });
-    setSubmitting(false);
-
     if (res.ok) {
+      if (res.external) {
+        // Redirige a la pasarela (Wompi). El carrito se limpia al confirmar
+        // el pago, en la página de retorno.
+        window.location.assign(res.redirect);
+        return;
+      }
       clear();
       clearCoupon();
       router.push(res.redirect);
     } else {
+      setSubmitting(false);
       toast.error(res.error);
     }
   }
@@ -177,11 +184,19 @@ export function CheckoutForm({
             <p className="flex items-center gap-2 font-medium text-foreground">
               <Lock className="size-4" /> Pago seguro
             </p>
-            <p className="mt-1">
-              En modo demo el pago se simula y el pedido queda como{" "}
-              <strong>pagado</strong>. Al conectar Stripe, aquí se abrirá la
-              pasarela real.
-            </p>
+            {wompiEnabled ? (
+              <p className="mt-1">
+                Al continuar te llevaremos a la página segura de{" "}
+                <strong>Wompi</strong> para pagar con PSE, Nequi, tarjeta o
+                Bancolombia. Tu pedido se confirma al aprobarse el pago.
+              </p>
+            ) : (
+              <p className="mt-1">
+                En modo demo el pago se simula y el pedido queda como{" "}
+                <strong>pagado</strong>. Al configurar Wompi, aquí se abrirá la
+                pasarela real.
+              </p>
+            )}
           </div>
         </section>
       </div>

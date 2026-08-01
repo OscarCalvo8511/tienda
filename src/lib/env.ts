@@ -26,7 +26,29 @@ export const env = {
   ),
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   stripePublishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
+  wompiPublicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY ?? "",
 };
+
+/**
+ * ¿Está configurada la pasarela Wompi?
+ * Requiere la llave pública (cliente) y el secreto de integridad (servidor).
+ * Si no, el checkout cae al pago simulado (modo demo).
+ */
+export function isWompiConfigured(): boolean {
+  return Boolean(env.wompiPublicKey && serverEnv.wompiIntegritySecret);
+}
+
+/** El ambiente de Wompi se deduce del prefijo de la llave pública. */
+export function wompiEnv(): "sandbox" | "production" {
+  return env.wompiPublicKey.startsWith("pub_prod_") ? "production" : "sandbox";
+}
+
+/** Base de la API REST de Wompi según el ambiente. */
+export function wompiApiBase(): string {
+  return wompiEnv() === "production"
+    ? "https://production.wompi.co/v1"
+    : "https://sandbox.wompi.co/v1";
+}
 
 /**
  * ¿Hay credenciales de Supabase configuradas?
@@ -42,4 +64,7 @@ export const serverEnv = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  wompiPrivateKey: process.env.WOMPI_PRIVATE_KEY ?? "",
+  wompiIntegritySecret: process.env.WOMPI_INTEGRITY_SECRET ?? "",
+  wompiEventsSecret: process.env.WOMPI_EVENTS_SECRET ?? "",
 };

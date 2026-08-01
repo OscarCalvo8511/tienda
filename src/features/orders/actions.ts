@@ -1,10 +1,20 @@
 "use server";
 
 import { z } from "zod";
+import { isWompiConfigured } from "@/lib/env";
+import { fetchWompiTransaction } from "@/lib/payments/wompi-provider";
 import { getCurrentUser } from "@/features/auth/api";
-import { createOrder, validateCoupon } from "./api";
+import {
+  confirmOrderPayment,
+  createOrder,
+  createPaymentSession,
+  failOrderPayment,
+  getOrderForPayment,
+  validateCoupon,
+} from "./api";
 import { type CheckoutInput } from "./local";
 import { couponDiscount } from "./pricing";
+import type { OrderStatus } from "@/types/database.types";
 
 const checkoutSchema = z.object({
   items: z
@@ -34,7 +44,7 @@ const checkoutSchema = z.object({
 });
 
 export type CheckoutResult =
-  | { ok: true; redirect: string }
+  | { ok: true; redirect: string; external: boolean }
   | { ok: false; error: string };
 
 export async function createCheckoutAction(
@@ -52,13 +62,62 @@ export async function createCheckoutAction(
       ...(parsed.data as CheckoutInput),
       userId: user?.id ?? null,
     });
-    return { ok: true, redirect: `/checkout/exito?order=${order.order_number}` };
+
+    // Con Wompi: redirige a la pasarela. El pedido queda 'pending' y se
+    // confirma por webhook/retorno. Sin pasarela: pago simulado -> éxito.
+    if (isWompiConfigured()) {
+      const url = await createPaymentSession(order, {
+        name: parsed.data.address.full_name,
+      });
+      return { ok: true, redirect: url, external: true };
+    }
+    return {
+      ok: true,
+      redirect: `/checkout/exito?order=${order.order_number}`,
+      external: false,
+    };
   } catch (e) {
     return {
       ok: false,
       error: e instanceof Error ? e.message : "No se pudo crear el pedido",
     };
   }
+}
+
+/**
+ * Finaliza el retorno desde Wompi. Verifica la transacción contra la API de
+ * Wompi y confirma/rechaza el pedido (idempotente: seguro aunque el webhook
+ * ya lo haya hecho). Permite que el flujo funcione también en local, donde el
+ * webhook no puede alcanzar `localhost`.
+ */
+export async function finalizeWompiReturnAction(
+  orderNumber: string,
+  transactionId: string | null,
+): Promise<{ status: OrderStatus | "unknown" }> {
+  if (!isWompiConfigured()) return { status: "unknown" };
+
+  const order = await getOrderForPayment(orderNumber);
+  if (!order) return { status: "unknown" };
+  if (order.status !== "pending") return { status: order.status };
+  if (!transactionId) return { status: "pending" };
+
+  const tx = await fetchWompiTransaction(transactionId);
+  if (!tx) return { status: "pending" };
+
+  // Seguridad: la transacción debe corresponder a este pedido y a su monto.
+  if (tx.reference !== orderNumber) return { status: "pending" };
+  if (Math.round(order.total * 100) !== tx.amount_in_cents) {
+    return { status: "pending" };
+  }
+
+  const amount = (tx.amount_in_cents ?? 0) / 100;
+  if (tx.status === "APPROVED") {
+    return { status: await confirmOrderPayment(order.id, tx.id, amount) };
+  }
+  if (tx.status === "DECLINED" || tx.status === "VOIDED" || tx.status === "ERROR") {
+    return { status: await failOrderPayment(order.id, tx.id, amount) };
+  }
+  return { status: "pending" };
 }
 
 export type CouponResult =

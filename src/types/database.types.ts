@@ -1107,6 +1107,25 @@ export type Database = {
         }
         Returns: number
       }
+      confirm_order_payment: {
+        Args: {
+          p_amount: number
+          p_order_id: string
+          p_provider: Database["tienda"]["Enums"]["payment_provider"]
+          p_provider_ref: string
+        }
+        Returns: Database["tienda"]["Enums"]["order_status"]
+      }
+      fail_order_payment: {
+        Args: {
+          p_amount: number
+          p_new_status?: Database["tienda"]["Enums"]["order_status"]
+          p_order_id: string
+          p_provider: Database["tienda"]["Enums"]["payment_provider"]
+          p_provider_ref: string
+        }
+        Returns: Database["tienda"]["Enums"]["order_status"]
+      }
       is_admin: { Args: never; Returns: boolean }
       register_sale: { Args: { p_order_id: string }; Returns: undefined }
     }
