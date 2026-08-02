@@ -36,21 +36,6 @@ export function AnnouncementBar({ threshold }: { threshold: number }) {
         {group}
         {group}
       </div>
-      <style>{`
-        .marquee-track {
-          animation: announcement-marquee 30s linear infinite;
-        }
-        .marquee-track:hover {
-          animation-play-state: paused;
-        }
-        @keyframes announcement-marquee {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .marquee-track { animation: none; }
-        }
-      `}</style>
     </div>
   );
 }

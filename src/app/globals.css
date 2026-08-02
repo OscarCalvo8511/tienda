@@ -198,4 +198,28 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Marquee de la barra de anuncios (envío gratis). */
+  .marquee-track {
+    animation: announcement-marquee 30s linear infinite;
+    will-change: transform;
+  }
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes announcement-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
 }
