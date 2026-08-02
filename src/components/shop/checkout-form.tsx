@@ -12,7 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCOP } from "@/lib/utils";
-import { COLOMBIA_DEPARTMENTS } from "@/lib/colombia";
+import {
+  COLOMBIA_DEPARTMENTS,
+  COLOMBIA_CITIES,
+  OTHER_CITY,
+  type ColombiaDepartment,
+} from "@/lib/colombia";
 
 interface ShippingMethod {
   id: string;
@@ -43,6 +48,14 @@ export function CheckoutForm({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const [department, setDepartment] = useState("");
+  const [city, setCity] = useState("");
+  const [otherCity, setOtherCity] = useState("");
+  const cities = department
+    ? COLOMBIA_CITIES[department as ColombiaDepartment] ?? []
+    : [];
+  const resolvedCity = city === OTHER_CITY ? otherCity.trim() : city;
+
   const subtotal = useMemo(
     () => items.reduce((s, i) => s + i.price * i.quantity, 0),
     [items],
@@ -63,6 +76,14 @@ export function CheckoutForm({
       toast.error("Tu carrito está vacío");
       return;
     }
+    if (!department) {
+      toast.error("Selecciona el departamento");
+      return;
+    }
+    if (!resolvedCity) {
+      toast.error("Selecciona o escribe la ciudad");
+      return;
+    }
     const fd = new FormData(e.currentTarget);
     setSubmitting(true);
     const res = await createCheckoutAction({
@@ -80,8 +101,8 @@ export function CheckoutForm({
         full_name: String(fd.get("full_name")),
         line1: String(fd.get("line1")),
         line2: String(fd.get("line2") ?? ""),
-        city: String(fd.get("city")),
-        department: String(fd.get("department")),
+        city: resolvedCity,
+        department,
         country: "Colombia",
       },
       couponCode: code,
@@ -133,14 +154,18 @@ export function CheckoutForm({
           <Field label="Dirección" name="line1" required placeholder="Calle 00 # 00-00" />
           <Field label="Complemento (opcional)" name="line2" placeholder="Apto, torre, indicaciones" />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Ciudad" name="city" required />
             <div className="space-y-1.5">
               <Label htmlFor="department">Departamento</Label>
               <select
                 id="department"
                 name="department"
                 required
-                defaultValue=""
+                value={department}
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  setCity("");
+                  setOtherCity("");
+                }}
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="" disabled>Selecciona…</option>
@@ -149,7 +174,38 @@ export function CheckoutForm({
                 ))}
               </select>
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="city">Ciudad</Label>
+              <select
+                id="city"
+                required
+                disabled={!department}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="" disabled>
+                  {department ? "Selecciona…" : "Elige un departamento primero"}
+                </option>
+                {cities.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+                <option value={OTHER_CITY}>Otra ciudad…</option>
+              </select>
+            </div>
           </div>
+          {city === OTHER_CITY && (
+            <div className="space-y-1.5">
+              <Label htmlFor="city_other">Escribe tu ciudad</Label>
+              <Input
+                id="city_other"
+                required
+                value={otherCity}
+                onChange={(e) => setOtherCity(e.target.value)}
+                placeholder="Nombre del municipio"
+              />
+            </div>
+          )}
           <Field label="País" name="country" defaultValue="Colombia" disabled />
         </section>
 
