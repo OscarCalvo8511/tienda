@@ -11,6 +11,7 @@ import { ProductPurchase } from "@/components/shop/product-purchase";
 import { ProductGrid } from "@/components/shop/product-grid";
 import { Price } from "@/components/shop/price";
 import { RatingStars } from "@/components/shop/rating-stars";
+import { ReviewSection } from "@/components/shop/review-section";
 import { WishlistButton } from "@/components/shop/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -172,6 +173,14 @@ export default async function ProductPage({
           </section>
         )}
       </div>
+
+      {/* Reseñas */}
+      <ReviewSection
+        productId={product.id}
+        slug={product.slug}
+        ratingAvg={product.rating_avg}
+        ratingCount={product.rating_count}
+      />
 
       {/* Relacionados */}
       {related.length > 0 && (

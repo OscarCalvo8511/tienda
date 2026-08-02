@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Users,
   Ticket,
+  Star,
   BarChart3,
   Settings,
   Store,
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/clientes", label: "Clientes", icon: Users },
   { href: "/admin/cupones", label: "Cupones", icon: Ticket },
+  { href: "/admin/resenas", label: "Reseñas", icon: Star },
   { href: "/admin/informes", label: "Informes", icon: BarChart3 },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
