@@ -59,6 +59,19 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(env.supabaseUrl && env.supabaseAnonKey);
 }
 
+/**
+ * ¿Está configurado el envío de correos (Resend)?
+ * Sin `RESEND_API_KEY` los correos transaccionales se omiten silenciosamente
+ * (no rompen el pedido), igual que la pasarela cae a modo simulado sin Wompi.
+ */
+export function isEmailConfigured(): boolean {
+  return Boolean(serverEnv.resendApiKey);
+}
+
+/** Remitente de los correos transaccionales de la tienda. */
+export const EMAIL_FROM =
+  process.env.EMAIL_FROM ?? "DyC local store <ventas@dyclocalstore.com>";
+
 /** Variables solo-servidor. No importar desde componentes cliente. */
 export const serverEnv = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
@@ -67,4 +80,5 @@ export const serverEnv = {
   wompiPrivateKey: process.env.WOMPI_PRIVATE_KEY ?? "",
   wompiIntegritySecret: process.env.WOMPI_INTEGRITY_SECRET ?? "",
   wompiEventsSecret: process.env.WOMPI_EVENTS_SECRET ?? "",
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
 };

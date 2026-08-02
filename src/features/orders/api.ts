@@ -5,6 +5,7 @@ import { getPaymentProvider } from "@/lib/payments/provider";
 import { effectivePrice } from "@/lib/utils";
 import { getSettings } from "@/features/settings/api";
 import { computeTotals } from "./pricing";
+import { notifyOrderCreated, notifyOrderStatus } from "./emails";
 import {
   getLocalOrderByNumber,
   getLocalOrdersByUser,
@@ -133,6 +134,8 @@ export async function updateOrderStatus(
     .update({ status })
     .eq("id", orderId);
   if (error) throw error;
+  // Notifica al cliente el nuevo estado (preparando, enviado, entregado, etc.).
+  await notifyOrderStatus(orderId, status);
 }
 
 /**
@@ -243,6 +246,9 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     await supabase.rpc("register_sale", { p_order_id: order.id });
   }
 
+  // Correo de "pedido creado" (no bloquea ni falla el pedido si el envío falla).
+  await notifyOrderCreated(order.id);
+
   return order;
 }
 
@@ -297,6 +303,13 @@ export async function confirmOrderPayment(
   amount: number,
 ): Promise<OrderStatus> {
   const admin = createAdminClient();
+  const { data: before } = await admin
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .maybeSingle();
+  const wasPending =
+    (before as { status: OrderStatus } | null)?.status === "pending";
   const { data, error } = await admin.rpc("confirm_order_payment", {
     p_order_id: orderId,
     p_provider: "wompi",
@@ -304,7 +317,13 @@ export async function confirmOrderPayment(
     p_amount: amount,
   });
   if (error) throw error;
-  return data as OrderStatus;
+  const finalStatus = data as OrderStatus;
+  // Solo notifica en la transición real (evita correos duplicados si el webhook
+  // y la página de retorno confirman el mismo pago).
+  if (wasPending && finalStatus === "paid") {
+    await notifyOrderStatus(orderId, finalStatus);
+  }
+  return finalStatus;
 }
 
 /** Marca un intento de pago fallido/anulado (idempotente). */
@@ -315,6 +334,13 @@ export async function failOrderPayment(
   newStatus: OrderStatus = "cancelled",
 ): Promise<OrderStatus> {
   const admin = createAdminClient();
+  const { data: before } = await admin
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .maybeSingle();
+  const wasPending =
+    (before as { status: OrderStatus } | null)?.status === "pending";
   const { data, error } = await admin.rpc("fail_order_payment", {
     p_order_id: orderId,
     p_provider: "wompi",
@@ -323,5 +349,7 @@ export async function failOrderPayment(
     p_new_status: newStatus,
   });
   if (error) throw error;
-  return data as OrderStatus;
+  const finalStatus = data as OrderStatus;
+  if (wasPending) await notifyOrderStatus(orderId, finalStatus);
+  return finalStatus;
 }
