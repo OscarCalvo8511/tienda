@@ -51,9 +51,19 @@ export function CheckoutForm({
   const [department, setDepartment] = useState("");
   const [city, setCity] = useState("");
   const [otherCity, setOtherCity] = useState("");
-  const cities = department
-    ? COLOMBIA_CITIES[department as ColombiaDepartment] ?? []
-    : [];
+  const sortedDepartments = useMemo(
+    () => [...COLOMBIA_DEPARTMENTS].sort((a, b) => a.localeCompare(b, "es")),
+    [],
+  );
+  const cities = useMemo(
+    () =>
+      department
+        ? Array.from(
+            new Set(COLOMBIA_CITIES[department as ColombiaDepartment] ?? []),
+          ).sort((a, b) => a.localeCompare(b, "es"))
+        : [],
+    [department],
+  );
   const resolvedCity = city === OTHER_CITY ? otherCity.trim() : city;
 
   const subtotal = useMemo(
@@ -169,7 +179,7 @@ export function CheckoutForm({
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="" disabled>Selecciona…</option>
-                {COLOMBIA_DEPARTMENTS.map((d) => (
+                {sortedDepartments.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
