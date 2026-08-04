@@ -31,6 +31,7 @@ export function CheckoutForm({
   taxRate,
   taxIncluded,
   defaultEmail,
+  defaultAddress,
   wompiEnabled,
 }: {
   methods: ShippingMethod[];
@@ -38,6 +39,14 @@ export function CheckoutForm({
   taxRate: number;
   taxIncluded: boolean;
   defaultEmail: string;
+  defaultAddress?: {
+    full_name: string;
+    phone: string;
+    line1: string;
+    line2: string | null;
+    city: string;
+    department: string;
+  } | null;
   wompiEnabled: boolean;
 }) {
   const router = useRouter();
@@ -48,9 +57,20 @@ export function CheckoutForm({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const [department, setDepartment] = useState("");
-  const [city, setCity] = useState("");
-  const [otherCity, setOtherCity] = useState("");
+  // Precarga de la dirección guardada (última compra). Si la ciudad guardada no
+  // está en la lista del departamento, se muestra vía "Otra ciudad…".
+  const savedDept = defaultAddress?.department ?? "";
+  const savedCity = defaultAddress?.city ?? "";
+  const savedDeptCities = savedDept
+    ? COLOMBIA_CITIES[savedDept as ColombiaDepartment] ?? []
+    : [];
+  const savedCityInList = Boolean(savedCity) && savedDeptCities.includes(savedCity);
+
+  const [department, setDepartment] = useState(savedDept);
+  const [city, setCity] = useState(
+    savedCityInList ? savedCity : savedCity ? OTHER_CITY : "",
+  );
+  const [otherCity, setOtherCity] = useState(savedCityInList ? "" : savedCity);
   const sortedDepartments = useMemo(
     () => [...COLOMBIA_DEPARTMENTS].sort((a, b) => a.localeCompare(b, "es")),
     [],
@@ -153,16 +173,16 @@ export function CheckoutForm({
           <h2 className="font-semibold">Datos de contacto</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Correo" name="email" type="email" required defaultValue={defaultEmail} />
-            <Field label="Teléfono" name="phone" type="tel" required placeholder="300 000 0000" />
+            <Field label="Teléfono" name="phone" type="tel" required placeholder="300 000 0000" defaultValue={defaultAddress?.phone} />
           </div>
         </section>
 
         {/* Envío */}
         <section className="space-y-4 rounded-xl border p-5">
           <h2 className="font-semibold">Dirección de envío</h2>
-          <Field label="Nombre completo" name="full_name" required />
-          <Field label="Dirección" name="line1" required placeholder="Calle 00 # 00-00" />
-          <Field label="Complemento (opcional)" name="line2" placeholder="Apto, torre, indicaciones" />
+          <Field label="Nombre completo" name="full_name" required defaultValue={defaultAddress?.full_name} />
+          <Field label="Dirección" name="line1" required placeholder="Calle 00 # 00-00" defaultValue={defaultAddress?.line1} />
+          <Field label="Complemento (opcional)" name="line2" placeholder="Apto, torre, indicaciones" defaultValue={defaultAddress?.line2 ?? undefined} />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="department">Departamento</Label>

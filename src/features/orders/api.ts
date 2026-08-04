@@ -246,10 +246,71 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     await supabase.rpc("register_sale", { p_order_id: order.id });
   }
 
+  // Guarda la dirección del comprador para precargarla en la próxima compra
+  // (no bloquea el pedido si falla).
+  if (input.userId) {
+    await saveCheckoutAddress(supabase, input.userId, input.address, input.customer.phone);
+  }
+
   // Correo de "pedido creado" (no bloquea ni falla el pedido si el envío falla).
   await notifyOrderCreated(order.id);
 
   return order;
+}
+
+/**
+ * Guarda (o refresca) la dirección usada en el checkout como predeterminada del
+ * usuario, para precargarla en compras futuras. Idempotente y tolerante a
+ * fallos: nunca lanza.
+ */
+async function saveCheckoutAddress(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  address: CheckoutInput["address"],
+  phone: string,
+): Promise<void> {
+  try {
+    const { data: existing } = await supabase
+      .from("addresses")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("line1", address.line1)
+      .eq("city", address.city)
+      .maybeSingle();
+
+    // La dirección usada pasa a ser la predeterminada.
+    await supabase
+      .from("addresses")
+      .update({ is_default: false })
+      .eq("user_id", userId);
+
+    if (existing) {
+      await supabase
+        .from("addresses")
+        .update({
+          is_default: true,
+          full_name: address.full_name,
+          phone,
+          line2: address.line2 ?? null,
+          department: address.department,
+        })
+        .eq("id", (existing as { id: string }).id);
+    } else {
+      await supabase.from("addresses").insert({
+        user_id: userId,
+        full_name: address.full_name,
+        phone,
+        line1: address.line1,
+        line2: address.line2 ?? null,
+        city: address.city,
+        department: address.department,
+        country: "Colombia",
+        is_default: true,
+      });
+    }
+  } catch (err) {
+    console.error("[orders] no se pudo guardar la dirección:", err);
+  }
 }
 
 // ============================================================

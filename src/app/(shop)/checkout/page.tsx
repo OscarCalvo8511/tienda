@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 import { getSettings } from "@/features/settings/api";
 import { getCurrentProfile } from "@/features/auth/api";
+import { getUserAddresses } from "@/features/account/api";
 import { isWompiConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Finalizar compra" };
@@ -13,6 +14,21 @@ export default async function CheckoutPage() {
     getSettings(),
     getCurrentProfile().catch(() => null),
   ]);
+
+  const addresses = profile
+    ? await getUserAddresses(profile.id).catch(() => [])
+    : [];
+  const saved = addresses[0] ?? null;
+  const defaultAddress = saved
+    ? {
+        full_name: saved.full_name,
+        phone: saved.phone,
+        line1: saved.line1,
+        line2: saved.line2,
+        city: saved.city,
+        department: saved.department,
+      }
+    : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -29,6 +45,7 @@ export default async function CheckoutPage() {
         taxRate={tax.rate}
         taxIncluded={tax.included}
         defaultEmail={profile?.email ?? ""}
+        defaultAddress={defaultAddress}
         wompiEnabled={isWompiConfigured()}
       />
     </div>
