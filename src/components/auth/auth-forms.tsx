@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GoogleButton } from "./google-button";
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -42,12 +41,6 @@ function Feedback({ state }: { state: ActionState }) {
   return null;
 }
 
-const Divider = () => (
-  <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-    <span className="h-px flex-1 bg-border" /> o <span className="h-px flex-1 bg-border" />
-  </div>
-);
-
 export function LoginForm({ redirectTo = "/" }: { redirectTo?: string }) {
   const [state, action] = useActionState<ActionState, FormData>(
     signInAction,
@@ -59,9 +52,7 @@ export function LoginForm({ redirectTo = "/" }: { redirectTo?: string }) {
       <p className="mt-1 text-sm text-muted-foreground">
         Ingresa a tu cuenta para continuar.
       </p>
-      <GoogleButton next={redirectTo} />
-      <Divider />
-      <form action={action} className="space-y-4">
+      <form action={action} className="mt-5 space-y-4">
         <input type="hidden" name="redirect" value={redirectTo} />
         <div className="space-y-1.5">
           <Label htmlFor="email">Correo</Label>
@@ -97,9 +88,7 @@ export function RegisterForm() {
       <p className="mt-1 text-sm text-muted-foreground">
         Regístrate para comprar más rápido.
       </p>
-      <GoogleButton />
-      <Divider />
-      <form action={action} className="space-y-4">
+      <form action={action} className="mt-5 space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="fullName">Nombre completo</Label>
           <Input id="fullName" name="fullName" required autoComplete="name" />

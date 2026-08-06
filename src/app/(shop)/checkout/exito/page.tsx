@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Package } from "lucide-react";
-import { getOrderByNumber } from "@/features/orders/api";
+import { getOrderByNumberPublic } from "@/features/orders/api";
+import { getCurrentUser } from "@/features/auth/api";
 import { Button } from "@/components/ui/button";
 import { formatCOP, formatDate } from "@/lib/utils";
 
@@ -16,9 +17,10 @@ export default async function CheckoutSuccessPage({
   const { order: orderNumber } = await searchParams;
   if (!orderNumber) notFound();
 
-  const result = await getOrderByNumber(orderNumber).catch(() => null);
+  const result = await getOrderByNumberPublic(orderNumber).catch(() => null);
   if (!result) notFound();
   const { order, items } = result;
+  const user = await getCurrentUser().catch(() => null);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -63,12 +65,14 @@ export default async function CheckoutSuccessPage({
         </dl>
 
         <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Button asChild>
-            <Link href="/cuenta/pedidos">
-              <Package className="size-4" /> Ver mis pedidos
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
+          {user && (
+            <Button asChild>
+              <Link href="/cuenta/pedidos">
+                <Package className="size-4" /> Ver mis pedidos
+              </Link>
+            </Button>
+          )}
+          <Button asChild variant={user ? "outline" : "default"}>
             <Link href="/productos">Seguir comprando</Link>
           </Button>
         </div>

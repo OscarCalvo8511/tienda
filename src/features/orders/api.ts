@@ -44,6 +44,29 @@ export async function getOrderByNumber(
   return { order: order as Order, items: (items ?? []) as OrderItem[] };
 }
 
+/**
+ * Lee un pedido por su número con el cliente admin (sin sesión). Se usa en la
+ * página de confirmación para que un comprador invitado pueda ver su pedido
+ * recién hecho. Solo se muestran datos no sensibles (ítems y totales).
+ */
+export async function getOrderByNumberPublic(
+  orderNumber: string,
+): Promise<{ order: Order; items: OrderItem[] } | null> {
+  if (!isSupabaseConfigured()) return getLocalOrderByNumber(orderNumber);
+  const admin = createAdminClient();
+  const { data: order } = await admin
+    .from("orders")
+    .select("*")
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+  if (!order) return null;
+  const { data: items } = await admin
+    .from("order_items")
+    .select("*")
+    .eq("order_id", (order as Order).id);
+  return { order: order as Order, items: (items ?? []) as OrderItem[] };
+}
+
 export async function getUserOrders(userId: string): Promise<Order[]> {
   if (!isSupabaseConfigured()) return getLocalOrdersByUser(userId);
   const supabase = await createClient();

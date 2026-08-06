@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
  * Refresca la sesión de Supabase en cada petición y protege rutas privadas.
  * - /admin      → requiere rol admin.
  * - /cuenta     → requiere sesión iniciada.
- * - /checkout   → requiere sesión iniciada.
+ * (El checkout es público: se puede comprar como invitado.)
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -41,10 +41,7 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");
-  const isProtected =
-    isAdminRoute ||
-    pathname.startsWith("/cuenta") ||
-    pathname.startsWith("/checkout");
+  const isProtected = isAdminRoute || pathname.startsWith("/cuenta");
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();

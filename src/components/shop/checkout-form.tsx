@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, Lock } from "lucide-react";
@@ -28,6 +28,9 @@ interface ShippingMethod {
   name: string;
   price: number;
 }
+
+/** Datos del checkout guardados en el dispositivo para clientes frecuentes. */
+const CHECKOUT_STORAGE_KEY = "dyc_checkout_data";
 
 export function CheckoutForm({
   methods,
@@ -90,6 +93,40 @@ export function CheckoutForm({
   );
   const resolvedCity = city === OTHER_CITY ? otherCity.trim() : city;
 
+  // Precarga desde el dispositivo para invitados frecuentes, solo si el
+  // servidor no precargó ya una dirección (usuario con sesión).
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (defaultAddress) return;
+    try {
+      const raw = localStorage.getItem(CHECKOUT_STORAGE_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw) as Record<string, string | undefined>;
+      const form = formRef.current;
+      if (form) {
+        for (const name of ["email", "phone", "full_name", "line1", "line2"]) {
+          const el = form.elements.namedItem(name) as HTMLInputElement | null;
+          if (el && d[name]) el.value = d[name] as string;
+        }
+      }
+      if (d.department) {
+        setDepartment(d.department);
+        const list = COLOMBIA_CITIES[d.department as ColombiaDepartment] ?? [];
+        if (d.city) {
+          if (list.includes(d.city)) setCity(d.city);
+          else {
+            setCity(OTHER_CITY);
+            setOtherCity(d.city);
+          }
+        }
+      }
+    } catch {
+      // localStorage no disponible o dato corrupto: se ignora.
+    }
+    // Solo al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const subtotal = useMemo(
     () => items.reduce((s, i) => s + i.price * i.quantity, 0),
     [items],
@@ -123,6 +160,25 @@ export function CheckoutForm({
       return;
     }
     const fd = new FormData(e.currentTarget);
+
+    // Recuerda los datos en el dispositivo para la próxima compra (invitados).
+    try {
+      localStorage.setItem(
+        CHECKOUT_STORAGE_KEY,
+        JSON.stringify({
+          email: String(fd.get("email")),
+          phone: String(fd.get("phone")),
+          full_name: String(fd.get("full_name")),
+          line1: String(fd.get("line1")),
+          line2: String(fd.get("line2") ?? ""),
+          department,
+          city: resolvedCity,
+        }),
+      );
+    } catch {
+      // Sin localStorage: no pasa nada.
+    }
+
     setSubmitting(true);
     const res = await createCheckoutAction({
       items: items.map((i) => ({
@@ -174,7 +230,7 @@ export function CheckoutForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <form ref={formRef} onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <div className="space-y-8">
         {/* Contacto */}
         <section className="space-y-4 rounded-xl border p-5">
