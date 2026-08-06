@@ -13,6 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCOP } from "@/lib/utils";
 import {
+  EXPRESS_FEE_ON_FREE_SHIPPING,
+  STANDARD_METHOD_ID,
+} from "@/features/orders/pricing";
+import {
   COLOMBIA_DEPARTMENTS,
   COLOMBIA_CITIES,
   OTHER_CITY,
@@ -94,7 +98,11 @@ export function CheckoutForm({
   const discounted = subtotal - effectiveDiscount;
   const selectedMethod = methods.find((m) => m.id === method);
   const freeShipping = freeThreshold > 0 && discounted >= freeThreshold;
-  const shipping = freeShipping ? 0 : selectedMethod?.price ?? 0;
+  const shipping = freeShipping
+    ? method === STANDARD_METHOD_ID
+      ? 0
+      : EXPRESS_FEE_ON_FREE_SHIPPING
+    : selectedMethod?.price ?? 0;
   const tax = taxIncluded
     ? Math.round(discounted - discounted / (1 + taxRate))
     : Math.round(discounted * taxRate);
@@ -257,7 +265,11 @@ export function CheckoutForm({
                 {m.name}
               </span>
               <span className="font-medium">
-                {freeShipping ? "Gratis" : formatCOP(m.price)}
+                {freeShipping
+                  ? m.id === STANDARD_METHOD_ID
+                    ? "Gratis"
+                    : formatCOP(EXPRESS_FEE_ON_FREE_SHIPPING)
+                  : formatCOP(m.price)}
               </span>
             </label>
           ))}

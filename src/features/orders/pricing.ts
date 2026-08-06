@@ -30,15 +30,33 @@ export interface OrderTotals {
   total: number;
 }
 
+/** Id del método de envío estándar (el que queda gratis al superar el umbral). */
+export const STANDARD_METHOD_ID = "standard";
+
+/**
+ * Cuando aplica el envío gratis (por umbral o cupón), el envío estándar queda
+ * en $0 pero el envío más rápido (express) mantiene este costo reducido.
+ */
+export const EXPRESS_FEE_ON_FREE_SHIPPING = 7000;
+
 export function computeTotals(params: {
   items: PriceableItem[];
   coupon: Coupon | null;
   shippingCost: number;
+  shippingMethodId: string;
   freeShippingThreshold: number;
   taxRate: number;
   taxIncluded: boolean;
 }): OrderTotals {
-  const { items, coupon, shippingCost, freeShippingThreshold, taxRate, taxIncluded } = params;
+  const {
+    items,
+    coupon,
+    shippingCost,
+    shippingMethodId,
+    freeShippingThreshold,
+    taxRate,
+    taxIncluded,
+  } = params;
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const discount = couponDiscount(coupon, subtotal);
@@ -47,7 +65,13 @@ export function computeTotals(params: {
   const freeByThreshold =
     freeShippingThreshold > 0 && discounted >= freeShippingThreshold;
   const freeByCoupon = coupon?.type === "free_shipping" && subtotal >= (coupon?.min_purchase ?? 0);
-  const shipping = freeByThreshold || freeByCoupon ? 0 : shippingCost;
+  const freeShipping = freeByThreshold || freeByCoupon;
+  // Envío gratis: el estándar queda en $0; el express mantiene el costo reducido.
+  const shipping = freeShipping
+    ? shippingMethodId === STANDARD_METHOD_ID
+      ? 0
+      : EXPRESS_FEE_ON_FREE_SHIPPING
+    : shippingCost;
 
   // IVA incluido en el precio: solo informativo; no se suma al total.
   const tax = taxIncluded

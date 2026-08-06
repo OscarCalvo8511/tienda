@@ -186,6 +186,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     items: priced.map((p) => ({ price: p.price, quantity: p.quantity })),
     coupon,
     shippingCost: method?.price ?? 0,
+    shippingMethodId: input.shippingMethodId,
     freeShippingThreshold: settings.shipping.free_threshold,
     taxRate: settings.tax.rate,
     taxIncluded: settings.tax.included,
