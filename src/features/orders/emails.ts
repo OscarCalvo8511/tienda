@@ -1,10 +1,11 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
-import { env } from "@/lib/env";
+import { env, ORDER_ADMIN_EMAIL } from "@/lib/env";
 import { sendEmail } from "@/lib/email/client";
 import {
   orderCreatedEmail,
   orderStatusEmail,
+  adminNewOrderEmail,
   type OrderEmailData,
   type OrderEmailItem,
 } from "@/lib/email/order-templates";
@@ -38,7 +39,11 @@ interface ItemRow {
  */
 async function buildOrderEmailData(
   orderId: string,
-): Promise<{ emailData: OrderEmailData; to: string } | null> {
+): Promise<{
+  emailData: OrderEmailData;
+  to: string;
+  customerPhone: string | null;
+} | null> {
   const admin = createAdminClient();
 
   const { data: orderData } = await admin
@@ -98,6 +103,7 @@ async function buildOrderEmailData(
 
   return {
     to: order.customer_email,
+    customerPhone: typeof addr.phone === "string" ? addr.phone : null,
     emailData: {
       storeName: settings.store.name,
       orderNumber: order.order_number,
@@ -130,6 +136,30 @@ export async function notifyOrderCreated(orderId: string): Promise<void> {
     await sendEmail({ to: built.to, subject, html });
   } catch (err) {
     console.error("[email] notifyOrderCreated falló:", err);
+  }
+}
+
+/**
+ * Avisa al administrador (correo de contacto de la tienda) que se concretó una
+ * nueva compra, con los datos del cliente y un enlace al panel. Nunca lanza:
+ * un fallo de correo no debe afectar la compra.
+ */
+export async function notifyAdminNewOrder(orderId: string): Promise<void> {
+  try {
+    const built = await buildOrderEmailData(orderId);
+    if (!built) return;
+    const adminTo = ORDER_ADMIN_EMAIL;
+    if (!adminTo) return;
+    const adminUrl = `${env.siteUrl}/admin/pedidos/${encodeURIComponent(built.emailData.orderNumber)}`;
+    const { subject, html } = adminNewOrderEmail(built.emailData, {
+      customerEmail: built.to,
+      customerPhone: built.customerPhone,
+      adminUrl,
+    });
+    // replyTo al cliente: así el admin puede responderle directo desde el aviso.
+    await sendEmail({ to: adminTo, subject, html, replyTo: built.to });
+  } catch (err) {
+    console.error("[email] notifyAdminNewOrder falló:", err);
   }
 }
 

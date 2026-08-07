@@ -72,6 +72,14 @@ export function isEmailConfigured(): boolean {
 export const EMAIL_FROM =
   process.env.EMAIL_FROM ?? "DyC local store <ventas@dyclocalstore.com>";
 
+/**
+ * Correo del administrador que recibe el aviso de cada nueva compra.
+ * Fijo por variable de entorno (no depende de la tabla `settings`), con un
+ * valor por defecto para que funcione sin configuración extra.
+ */
+export const ORDER_ADMIN_EMAIL =
+  process.env.ORDER_ADMIN_EMAIL ?? "ventas@dyclocalstore.com";
+
 /** Variables solo-servidor. No importar desde componentes cliente. */
 export const serverEnv = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",

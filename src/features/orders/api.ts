@@ -5,7 +5,11 @@ import { getPaymentProvider } from "@/lib/payments/provider";
 import { effectivePrice } from "@/lib/utils";
 import { getSettings } from "@/features/settings/api";
 import { computeTotals } from "./pricing";
-import { notifyOrderCreated, notifyOrderStatus } from "./emails";
+import {
+  notifyOrderCreated,
+  notifyOrderStatus,
+  notifyAdminNewOrder,
+} from "./emails";
 import {
   getLocalOrderByNumber,
   getLocalOrdersByUser,
@@ -282,7 +286,14 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   }
 
   // Correo de "pedido creado" (no bloquea ni falla el pedido si el envío falla).
-  await notifyOrderCreated(order.id);
+  // Con pasarela real, se difiere hasta confirmar el pago: así el correo de
+  // pedido y el de pago se envían juntos al pagar (ver confirmOrderPayment).
+  // En modo demo el pago es inmediato, por lo que se envía ya. También se avisa
+  // al admin de la nueva compra (con pasarela real, ese aviso se difiere al pago).
+  if (!wompi) {
+    await notifyOrderCreated(order.id);
+    await notifyAdminNewOrder(order.id);
+  }
 
   return order;
 }
@@ -409,9 +420,12 @@ export async function confirmOrderPayment(
   if (error) throw error;
   const finalStatus = data as OrderStatus;
   // Solo notifica en la transición real (evita correos duplicados si el webhook
-  // y la página de retorno confirman el mismo pago).
+  // y la página de retorno confirman el mismo pago). Se envían juntos el correo
+  // de "pedido creado" (diferido desde createOrder) y el de "pago confirmado".
   if (wasPending && finalStatus === "paid") {
+    await notifyOrderCreated(orderId);
     await notifyOrderStatus(orderId, finalStatus);
+    await notifyAdminNewOrder(orderId);
   }
   return finalStatus;
 }

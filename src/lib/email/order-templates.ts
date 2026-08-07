@@ -112,8 +112,14 @@ function layout(opts: {
   body: string;
   orderNumber: string;
   orderUrl: string;
+  ctaLabel?: string;
+  footerNote?: string;
 }): string {
   const accent = opts.accent ?? BRAND;
+  const ctaLabel = opts.ctaLabel ?? "Ver mi pedido";
+  const footerNote =
+    opts.footerNote ??
+    `Recibiste este correo porque realizaste un pedido en ${esc(opts.storeName)}. Si tienes dudas, responde a este mensaje.`;
   return `<!doctype html>
 <html lang="es">
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
@@ -129,11 +135,11 @@ function layout(opts: {
           <p style="font-size:14px;color:${MUTED};margin:0 0 20px;line-height:1.55">${opts.intro}</p>
           ${opts.body}
           <div style="margin-top:28px">
-            <a href="${esc(opts.orderUrl)}" style="display:inline-block;background:${BRAND};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:9px">Ver mi pedido</a>
+            <a href="${esc(opts.orderUrl)}" style="display:inline-block;background:${BRAND};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:9px">${esc(ctaLabel)}</a>
           </div>
         </td></tr>
         <tr><td style="padding:20px 28px;border-top:1px solid ${BORDER}">
-          <p style="font-size:12px;color:${MUTED};margin:0;line-height:1.5">Recibiste este correo porque realizaste un pedido en ${esc(opts.storeName)}. Si tienes dudas, responde a este mensaje.</p>
+          <p style="font-size:12px;color:${MUTED};margin:0;line-height:1.5">${footerNote}</p>
         </td></tr>
       </table>
     </td></tr>
@@ -162,6 +168,55 @@ export function orderCreatedEmail(d: OrderEmailData): {
       body,
       orderNumber: d.orderNumber,
       orderUrl: d.orderUrl,
+    }),
+  };
+}
+
+/** Bloque con los datos de contacto del cliente (solo para el correo del admin). */
+function customerBlock(opts: {
+  name: string | null;
+  email: string;
+  phone: string | null;
+}): string {
+  const line = (label: string, value: string) => `
+    <tr>
+      <td style="padding:2px 0;font-size:13px;color:${MUTED};width:90px">${label}</td>
+      <td style="padding:2px 0;font-size:14px;color:#111827">${esc(value)}</td>
+    </tr>`;
+  return `
+    <div style="margin-bottom:20px;padding:14px 16px;background:#f9fafb;border:1px solid ${BORDER};border-radius:10px">
+      <div style="font-size:13px;color:${MUTED};text-transform:uppercase;letter-spacing:.03em;font-weight:600;margin-bottom:8px">Cliente</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+        ${opts.name ? line("Nombre", opts.name) : ""}
+        ${line("Correo", opts.email)}
+        ${opts.phone ? line("Teléfono", opts.phone) : ""}
+      </table>
+    </div>`;
+}
+
+/** Correo interno para el admin de la tienda: se concretó una nueva compra. */
+export function adminNewOrderEmail(
+  d: OrderEmailData,
+  extra: { customerEmail: string; customerPhone: string | null; adminUrl: string },
+): { subject: string; html: string } {
+  const body = `
+    <div style="font-size:13px;color:${MUTED};margin-bottom:16px">Fecha: ${formatDateTime(d.createdAt)}</div>
+    ${customerBlock({ name: d.customerName, email: extra.customerEmail, phone: extra.customerPhone })}
+    ${itemsTable(d.items)}
+    <div style="border-top:1px solid ${BORDER};margin-top:12px;padding-top:8px">${totalsBlock(d)}</div>
+    ${addressBlock(d)}`;
+  return {
+    subject: `🛒 Nueva compra ${d.orderNumber} · ${formatCOP(d.total)}`,
+    html: layout({
+      storeName: d.storeName,
+      heading: "Nueva compra recibida",
+      intro: `Se concretó una compra por <strong>${formatCOP(d.total)}</strong>. Revisa los detalles abajo o entra al panel para gestionarla.`,
+      accent: "#16a34a",
+      body,
+      orderNumber: d.orderNumber,
+      orderUrl: extra.adminUrl,
+      ctaLabel: "Ver pedido en el panel",
+      footerNote: `Notificación automática de nueva compra en ${esc(d.storeName)}.`,
     }),
   };
 }
