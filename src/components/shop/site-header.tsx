@@ -9,6 +9,7 @@ import { AccountMenu } from "./account-menu";
 import { CategoryMegaNav } from "./category-nav";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -35,22 +36,44 @@ export async function SiteHeader() {
               <SheetTitle>{settings.store.name}</SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col gap-1 px-2">
+              <SheetClose asChild>
+                <Link
+                  href="/"
+                  className="block rounded-md px-3 py-2 font-medium hover:bg-accent"
+                >
+                  Inicio
+                </Link>
+              </SheetClose>
+              <SheetClose asChild>
+                <Link
+                  href="/productos"
+                  className="block rounded-md px-3 py-2 font-medium hover:bg-accent"
+                >
+                  Catálogo
+                </Link>
+              </SheetClose>
+
+              <div className="my-1 border-t" />
+
               {tree.map((cat) => (
                 <div key={cat.id} className="py-1">
-                  <Link
-                    href={`/productos?categoria=${cat.slug}`}
-                    className="block rounded-md px-3 py-2 font-medium hover:bg-accent"
-                  >
-                    {cat.name}
-                  </Link>
-                  {cat.children.map((child) => (
+                  <SheetClose asChild>
                     <Link
-                      key={child.id}
-                      href={`/productos?categoria=${child.slug}`}
-                      className="block rounded-md px-6 py-1.5 text-sm text-muted-foreground hover:bg-accent"
+                      href={`/productos?categoria=${cat.slug}`}
+                      className="block rounded-md px-3 py-2 font-medium hover:bg-accent"
                     >
-                      {child.name}
+                      {cat.name}
                     </Link>
+                  </SheetClose>
+                  {cat.children.map((child) => (
+                    <SheetClose asChild key={child.id}>
+                      <Link
+                        href={`/productos?categoria=${child.slug}`}
+                        className="block rounded-md px-6 py-1.5 text-sm text-muted-foreground hover:bg-accent"
+                      >
+                        {child.name}
+                      </Link>
+                    </SheetClose>
                   ))}
                 </div>
               ))}
