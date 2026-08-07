@@ -174,6 +174,11 @@ export async function updateOrderStatus(
 export async function createOrder(input: CheckoutInput): Promise<Order> {
   if (!isSupabaseConfigured()) return createLocalOrder(input);
   const supabase = await createClient();
+  // Las lecturas (productos, settings, cupón) van con el cliente de sesión;
+  // las ESCRITURAS del pedido usan el cliente admin para soportar la compra
+  // como invitado (sin sesión, user_id null) sin abrir el RLS. El servidor
+  // controla el user_id (desde getCurrentUser) y re-precia, así que es seguro.
+  const writeDb = createAdminClient();
   const settings = await getSettings();
   const method = settings.shipping.methods.find(
     (m) => m.id === input.shippingMethodId,
@@ -217,7 +222,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
 
   const wompi = isWompiConfigured();
 
-  const { data: orderData, error: orderError } = await supabase
+  const { data: orderData, error: orderError } = await writeDb
     .from("orders")
     .insert({
       user_id: input.userId ?? null,
@@ -250,7 +255,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     quantity: p.quantity,
     line_total: p.price * p.quantity,
   }));
-  const { error: itemsError } = await supabase
+  const { error: itemsError } = await writeDb
     .from("order_items")
     .insert(itemRows);
   if (itemsError) throw itemsError;
@@ -259,7 +264,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   // pago (webhook/retorno). En modo demo, se hace ya con pago simulado.
   if (!wompi) {
     for (const p of priced) {
-      await supabase.rpc("adjust_inventory", {
+      await writeDb.rpc("adjust_inventory", {
         p_product_id: p.product.id,
         p_delta: -p.quantity,
         p_type: "sale",
@@ -267,7 +272,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
         p_variant_id: undefined,
       });
     }
-    await supabase.rpc("register_sale", { p_order_id: order.id });
+    await writeDb.rpc("register_sale", { p_order_id: order.id });
   }
 
   // Guarda la dirección del comprador para precargarla en la próxima compra
