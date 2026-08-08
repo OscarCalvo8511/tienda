@@ -1,5 +1,6 @@
 import type { OrderStatus } from "@/types/database.types";
 import { formatCOP } from "@/lib/utils";
+import { env } from "@/lib/env";
 
 export interface OrderEmailItem {
   name: string;
@@ -126,8 +127,8 @@ function layout(opts: {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 0">
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid ${BORDER}">
-        <tr><td style="background:${BRAND};padding:20px 28px">
-          <div style="color:#ffffff;font-size:18px;font-weight:700">${esc(opts.storeName)}</div>
+        <tr><td style="background:${BRAND};padding:20px 28px;text-align:center">
+          <img src="${env.siteUrl}/logo.jpg" width="72" height="72" alt="${esc(opts.storeName)}" style="width:72px;height:72px;border-radius:50%;display:inline-block;vertical-align:middle" />
         </td></tr>
         <tr><td style="padding:28px">
           <div style="display:inline-block;background:${accent}1a;color:${accent};font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px">Pedido ${esc(opts.orderNumber)}</div>

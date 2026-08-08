@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Package } from "lucide-react";
@@ -25,6 +26,13 @@ export default async function CheckoutSuccessPage({
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
       <div className="rounded-2xl border bg-card p-8 text-center">
+        <Image
+          src="/logo.jpg"
+          alt="DyC local store"
+          width={56}
+          height={56}
+          className="mx-auto mb-4 size-14 rounded-full"
+        />
         <div className="mx-auto grid size-16 place-items-center rounded-full bg-success/10">
           <CheckCircle2 className="size-9 text-success" />
         </div>

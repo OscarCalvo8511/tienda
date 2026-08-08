@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Menu } from "lucide-react";
 import { getCategoryTree } from "@/features/categories/api";
 import { getCurrentProfile } from "@/features/auth/api";
@@ -82,8 +83,18 @@ export async function SiteHeader() {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="shrink-0 text-lg font-bold tracking-tight">
-          {settings.store.name}
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          <Image
+            src="/logo.jpg"
+            alt={settings.store.name}
+            width={36}
+            height={36}
+            className="size-9 rounded-full"
+            priority
+          />
+          <span className="text-lg font-bold tracking-tight">
+            {settings.store.name}
+          </span>
         </Link>
 
         {/* Buscador */}
