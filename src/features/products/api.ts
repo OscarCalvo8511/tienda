@@ -175,3 +175,65 @@ export async function getRelatedProducts(
     .limit(limit);
   return (data ?? []) as ProductWithImage[];
 }
+
+/**
+ * Productos sugeridos para la ficha ("Otros productos que te pueden interesar").
+ * Primero de la misma categoría y, si no alcanzan, completa con otros productos
+ * activos, para que la sección siempre tenga contenido con su foto y precio.
+ */
+export async function getSuggestedProducts(
+  categoryId: string | null,
+  excludeId: string,
+  limit = 4,
+): Promise<ProductWithImage[]> {
+  if (!isSupabaseConfigured()) {
+    const base = local.localGetRelated(categoryId, excludeId, limit);
+    if (base.length >= limit) return base.slice(0, limit);
+    const { products } = local.localGetProducts({ pageSize: limit + 8 });
+    const seen = new Set([excludeId, ...base.map((p) => p.id)]);
+    const fill = products.filter((p) => !seen.has(p.id));
+    return [...base, ...fill].slice(0, limit);
+  }
+
+  const supabase = await createClient();
+  const result: ProductWithImage[] = [];
+  const seen = new Set<string>([excludeId]);
+  const cols = "*, product_images(url, alt, is_primary, position)";
+
+  // 1) Misma categoría.
+  if (categoryId) {
+    const { data } = await supabase
+      .from("products")
+      .select(cols)
+      .eq("is_active", true)
+      .eq("category_id", categoryId)
+      .neq("id", excludeId)
+      .limit(limit);
+    for (const p of (data ?? []) as ProductWithImage[]) {
+      if (!seen.has(p.id)) {
+        result.push(p);
+        seen.add(p.id);
+      }
+    }
+  }
+
+  // 2) Completa con otros productos si faltan.
+  if (result.length < limit) {
+    const { data } = await supabase
+      .from("products")
+      .select(cols)
+      .eq("is_active", true)
+      .neq("id", excludeId)
+      .order("created_at", { ascending: false })
+      .limit(limit + result.length + 4);
+    for (const p of (data ?? []) as ProductWithImage[]) {
+      if (result.length >= limit) break;
+      if (!seen.has(p.id)) {
+        result.push(p);
+        seen.add(p.id);
+      }
+    }
+  }
+
+  return result.slice(0, limit);
+}

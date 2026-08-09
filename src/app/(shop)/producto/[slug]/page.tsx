@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Check, Truck, ShieldCheck } from "lucide-react";
 import {
   getProductBySlug,
-  getRelatedProducts,
+  getSuggestedProducts,
 } from "@/features/products/api";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { ProductPurchase } from "@/components/shop/product-purchase";
@@ -41,7 +41,7 @@ export default async function ProductPage({
   const product = await getProductBySlug(slug).catch(() => null);
   if (!product) notFound();
 
-  const related = await getRelatedProducts(
+  const related = await getSuggestedProducts(
     product.category_id,
     product.id,
     4,
@@ -182,10 +182,12 @@ export default async function ProductPage({
         ratingCount={product.rating_count}
       />
 
-      {/* Relacionados */}
+      {/* Otros productos que te pueden interesar */}
       {related.length > 0 && (
         <section className="mt-12">
-          <h2 className="mb-4 text-lg font-bold">Productos relacionados</h2>
+          <h2 className="mb-4 text-lg font-bold">
+            Otros productos que te pueden interesar
+          </h2>
           <ProductGrid products={related} />
         </section>
       )}
