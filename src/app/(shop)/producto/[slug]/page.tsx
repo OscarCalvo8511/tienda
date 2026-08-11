@@ -174,15 +174,7 @@ export default async function ProductPage({
         )}
       </div>
 
-      {/* Reseñas */}
-      <ReviewSection
-        productId={product.id}
-        slug={product.slug}
-        ratingAvg={product.rating_avg}
-        ratingCount={product.rating_count}
-      />
-
-      {/* Otros productos que te pueden interesar */}
+      {/* Otros productos que te pueden interesar (antes de las reseñas) */}
       {related.length > 0 && (
         <section className="mt-12">
           <h2 className="mb-4 text-lg font-bold">
@@ -191,6 +183,14 @@ export default async function ProductPage({
           <ProductGrid products={related} />
         </section>
       )}
+
+      {/* Reseñas */}
+      <ReviewSection
+        productId={product.id}
+        slug={product.slug}
+        ratingAvg={product.rating_avg}
+        ratingCount={product.rating_count}
+      />
     </div>
   );
 }
