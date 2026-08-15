@@ -220,6 +220,30 @@
     transform: translateY(0) scale(0.97);
   }
 
+  /* Movimiento continuo (rebote suave) para llamar la atención */
+  .cta-move {
+    animation: cta-move 1.5s ease-in-out infinite;
+    will-change: transform;
+  }
+  /* Botón principal: rebote + resplandor a la vez (una sola propiedad animation) */
+  .cta-buy {
+    animation:
+      cta-move 1.5s ease-in-out infinite,
+      cta-glow 2.4s ease-in-out infinite;
+    will-change: transform;
+  }
+  .cta-move:hover,
+  .cta-buy:hover {
+    animation: none;
+    transform: translateY(-3px) scale(1.04);
+    transition: transform 0.18s ease;
+  }
+  .cta-move:active,
+  .cta-buy:active {
+    animation: none;
+    transform: translateY(0) scale(0.97);
+  }
+
   /* Brillo que barre el botón cada cierto tiempo */
   .cta-shine {
     position: relative;
@@ -284,16 +308,32 @@
   }
 }
 
+@keyframes cta-move {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.03);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cta-shine::before,
   .cta-glow,
-  .cta-icon {
+  .cta-icon,
+  .cta-move,
+  .cta-buy {
     animation: none;
   }
-  .cta-lift {
+  .cta-lift,
+  .cta-move,
+  .cta-buy {
     transition: none;
   }
-  .cta-lift:hover {
+  .cta-lift:hover,
+  .cta-move:hover,
+  .cta-buy:hover {
     transform: none;
   }
 }
