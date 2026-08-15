@@ -6,6 +6,7 @@ import { Minus, Plus, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AddToCartButton } from "./add-to-cart-button";
+import { PaymentBadges } from "./payment-badges";
 import { useCart, type CartLine } from "@/stores/cart";
 
 export function ProductPurchase({
@@ -73,6 +74,8 @@ export function ProductPurchase({
           <Zap className="size-4" /> Comprar ahora
         </Button>
       </div>
+
+      <PaymentBadges className="pt-1" />
     </div>
   );
 }
