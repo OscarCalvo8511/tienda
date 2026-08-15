@@ -62,16 +62,15 @@ export function ProductPurchase({
           quantity={qty}
           disabled={disabled}
           size="lg"
-          className="flex-1"
+          className="flex-1 cta-lift cta-shine"
         />
         <Button
           onClick={buyNow}
           disabled={disabled}
           size="lg"
-          variant="secondary"
-          className="flex-1"
+          className="flex-1 cta-lift cta-shine cta-glow border-0 bg-gradient-to-r from-brand to-sale font-semibold text-white hover:from-brand hover:to-sale hover:text-white"
         >
-          <Zap className="size-4" /> Comprar ahora
+          <Zap className="cta-icon size-4" /> Comprar ahora
         </Button>
       </div>
 
