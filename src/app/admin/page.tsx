@@ -14,6 +14,7 @@ import {
   TopProductsChart,
   OrdersStatusChart,
 } from "@/components/admin/dashboard-charts";
+import { AnalyticsLive } from "@/components/admin/analytics-live";
 import { formatCOP } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,9 @@ export default async function AdminDashboard() {
           Resumen general de tu tienda
         </p>
       </div>
+
+      {/* Analítica en vivo */}
+      <AnalyticsLive />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
